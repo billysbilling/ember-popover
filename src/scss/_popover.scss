@@ -1,0 +1,45 @@
+@mixin popover {
+    .popover {
+        $notch-size: 8px;
+    
+        z-index: 1000;
+        @include filter(drop-shadow(0px 1px 3px rgba(0, 0, 0, 0.4)));
+        -webkit-transform: translateZ(0);
+        position: absolute;
+        top: 0px;
+        left: 0px;
+        background: #fff;
+        @include border-radius($standard-border-radius);
+        padding: $tight-standard-padding;
+    
+        .notch {
+            position: absolute;
+            top: -1 * ($notch-size - 1px);
+            left: ($notch-size - 1px);
+            margin: 0;
+            border-top: 0;
+            border-left: ($notch-size - 1px) solid transparent;
+            border-right: ($notch-size - 1px) solid transparent;
+            border-bottom: ($notch-size - 1px) solid #fff;
+            padding: 0;
+            width: 0;
+            height: 0;
+        }
+        
+        &.above {
+            .notch {
+                top: auto;
+                bottom: -1 * ($notch-size - 1px);
+                border-top: ($notch-size - 1px) solid #fff;
+                border-bottom: 0;
+            }
+        }
+        
+        &.right {
+            .notch {
+                right: ($notch-size - 1px);
+                left: auto;
+            }
+        }
+    }
+}

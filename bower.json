@@ -1,0 +1,22 @@
+{
+  "name": "ember-popover",
+  "version": "0.1.0",
+  "homepage": "https://github.com/billysbilling/ember-popover",
+  "main": "src/js/popover.js",
+  "billy-builder": {
+    "include": ["src/js", "src/templates"]
+  },
+  "license": "MIT",
+  "ignore": [
+    "**/.*",
+    "node_modules",
+    "bower_components",
+    "test",
+    "tests"
+  ],
+  "dependencies": {
+    "ember": "billysbilling/bower-ember#master",
+    "style-guide": "billysbilling/style-guide#master",
+    "ember-layer-mixin": "billysbilling/ember-layer-mixin#master"
+  }
+}
