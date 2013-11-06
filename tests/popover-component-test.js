@@ -1,10 +1,12 @@
+var Popover = require('../src/js/popover');
+
 var container,
     target,
     TestPopover,
     popover,
     ct;
 
-QUnit.module('Billy.PopoverComponent', {
+QUnit.module('popover', {
     setup: function() {
         container = new Ember.Container();
         container.optionsForType('template', {instantiate: false});
@@ -16,7 +18,7 @@ QUnit.module('Billy.PopoverComponent', {
             style: 'position:absolute; top:0px; right:0px; left:0px; height:160px;'
         }));
         container.register('template:components/test-popover', Ember.Handlebars.compile('hello'));
-        TestPopover = Billy.PopoverComponent.extend({
+        TestPopover = PopoverComponent.extend({
             templateName: 'components/test-popover',
             attributeBindings: ['style'],
             style: 'padding:0px; border:0px;'

@@ -85,7 +85,7 @@ module.exports = Em.Component.extend(require('ember-layer-mixin'), {
         targetView.one('willDestroyElement', Billy.proxy(this.destroy, this));
         this._targetEl = targetEl || targetView.$();
         //We have to append it to the root element, later it will get moved to an appropriate ct
-        this.appendTo(Billy.get('rootElement'));
+        this.appendTo(this.container.lookup('application:main').get('rootElement'));
     },
 
     didInsertElement: function() {
@@ -125,7 +125,7 @@ module.exports = Em.Component.extend(require('ember-layer-mixin'), {
     _getCt: function() {
         var ct = this._targetEl.closest('.section-body, .scroll-ct');
         if (ct.length == 0) {
-            ct = $(Billy.rootElement);
+            ct = $(this.container.lookup('application:main').get('rootElement'));
         }
         return ct;
     },
