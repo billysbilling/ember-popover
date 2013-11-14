@@ -73,6 +73,15 @@ module.exports = Em.Component.extend(require('ember-layer-mixin'), {
     position: null,
 
     /**
+     * Whether the popover should be automatically destroyed when clicking the window outside the popover and its
+     * target.
+     *
+     * @property destroyOnWindowMouseDown
+     * @type Boolean
+     */
+    destroyOnWindowMouseDown: true,
+
+    /**
      * Tells the popover to display itself and align it to `targetEl`.
      * 
      * When `targetView` is destroyed the popover will automatically destroy itself.
@@ -102,6 +111,9 @@ module.exports = Em.Component.extend(require('ember-layer-mixin'), {
     },
 
     _didMouseDownWindow: function(e) {
+        if (!this.get('destroyOnWindowMouseDown')) {
+            return;
+        }
         var self = this;
         Em.run(function() {
             if (self.get('isDestroying')) {
