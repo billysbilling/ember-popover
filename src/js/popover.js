@@ -149,11 +149,12 @@ module.exports = Em.Component.extend(require('ember-layer-mixin'), {
             popoverEl = this.$(),
             popoverHeight = popoverEl.outerHeight(),
             ct = this._getCt(),
+            ctWidth = ct.outerWidth(),
             ctOffset = ct.offset(),
             ctTop = ctOffset.top,
             ctBottom = ctTop + ct.outerHeight(),
             offsetParent = popoverEl.offsetParent(),
-            offsetParentWidth = offsetParent.width(),
+            offsetParentWidth = offsetParent.outerWidth(),
             offsetParentOffset = offsetParent.offset(),
             offsetParentTop = offsetParentOffset.top - ct.scrollTop(),
             offsetParentBottom = offsetParentTop + offsetParent.outerHeight(),
@@ -195,6 +196,14 @@ module.exports = Em.Component.extend(require('ember-layer-mixin'), {
             popoverEl.outerWidth(width);
         }
         //Left/right align
+        if (!align) {
+            //See if there is space for the popover to be left aligned within its scroll container
+            if (targetOffset.left - offsetParentLeft + width < ctWidth) {
+                align = 'left';
+            } else {
+                align = 'right';
+            }
+        }
         if (align === 'right') {
             popoverRight = offsetParentWidth - (targetOffset.left - offsetParentLeft) - targetWidth;
             popoverEl.addClass('right');
