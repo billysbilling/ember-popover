@@ -1,5 +1,7 @@
 //TODO: Should not position above if the content goes above the scrollCt's top (then put it below no matter what)
 
+var ieDetect = require('ie-detect');
+
 /**
  * An extensible popover component shared by superfield selector, date selector etc.
  * 
@@ -17,7 +19,7 @@
 module.exports = Em.Component.extend(require('ember-layer-mixin'), {
     layout: require('../templates/popover-layout'),
 
-    classNames: ['popover'],
+    classNameBindings: [':popover', 'isIe'],
 
     /**
      * Whether the popover should match the `target`'s width.
@@ -80,6 +82,16 @@ module.exports = Em.Component.extend(require('ember-layer-mixin'), {
      * @type Boolean
      */
     destroyOnWindowMouseDown: true,
+
+    /**
+     * Simple IE detection for better drop-shadow filter handling
+     *
+     * @property isIe
+     * @type Boolean
+     */
+    isIe: function() {
+        return ieDetect.isIe;
+    }.property(),
 
     /**
      * Tells the popover to display itself and align it to `targetEl`.

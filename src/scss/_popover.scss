@@ -1,7 +1,7 @@
 @mixin popover {
     .popover {
         $notch-size: 8px;
-    
+
         z-index: 1000;
         @include filter(drop-shadow(0px 1px 3px rgba(0, 0, 0, 0.4)));
         filter: url('data:image/svg+xml,<svg height="0" xmlns="http://www.w3.org/2000/svg"><filter id="drop-shadow"><feGaussianBlur in="SourceAlpha" stdDeviation="3"/>«<feOffset dx="0" dy="1" result="offsetblur"/><feFlood flood-color="rgba(0,0,0,0.4)"/><feComposite in2="offsetblur" operator="in"/><feMerge><feMergeNode/><feMergeNode in="SourceGraphic"/></feMerge></filter></svg>#drop-shadow');
@@ -12,7 +12,7 @@
         background: #fff;
         @include border-radius($standard-border-radius);
         padding: $tight-standard-padding;
-    
+
         .notch {
             position: absolute;
             top: -1 * ($notch-size - 1px);
@@ -26,7 +26,7 @@
             width: 0;
             height: 0;
         }
-        
+
         &.above {
             .notch {
                 top: auto;
@@ -35,12 +35,16 @@
                 border-bottom: 0;
             }
         }
-        
+
         &.right {
             .notch {
                 right: ($notch-size - 1px);
                 left: auto;
             }
+        }
+
+        &.is-ie {
+            @include box-shadow(0 0 12px rgba(black, 0.3));
         }
     }
 }
