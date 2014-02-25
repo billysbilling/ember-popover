@@ -1,6 +1,9 @@
-var Popover = require('../src/js/popover');
+require('ember');
 
-var container,
+var PopoverComponent = require('../src/js/popover');
+
+var app,
+    container,
     target,
     TestPopover,
     popover,
@@ -9,8 +12,10 @@ var container,
 QUnit.module('popover', {
     setup: function() {
         container = new Ember.Container();
+        app = Ember.Application.extend();
         container.optionsForType('template', {instantiate: false});
-        container.register('template:components/popover-layout', Ember.TEMPLATES['components/popover-layout']);
+        container.register('application:main', app);
+        container.register('template:components/popover-layout', require('../src/templates/popover-layout'));
         container.register('view:popoverTarget', Ember.View.extend({
             template: Ember.Handlebars.compile('<div class="target" style="position:absolute; top:0px; left:0px; background-color:blue; width:200px; height:30px;"><div>'),
             classNames: ['popover-target'],
@@ -24,7 +29,7 @@ QUnit.module('popover', {
             style: 'padding:0px; border:0px;'
         });
         container.register('component:test-popover', TestPopover);
-        ct = $('<div class="scroll-ct"></div>')
+        ct = $('<div class="scroll-ct" style="overflow: auto;"></div>');
         ct.css({
             position: 'relative',
             width: '400px',
@@ -44,12 +49,14 @@ QUnit.module('popover', {
             ct.remove();
             container.destroy();
         });
-        popover = target = ct = container = null;
+        popover = target = ct = container = app = null;
     }
 });
 
-function createPopover() {
+function createPopover(props) {
+    props = $.extend({}, {within: '#ember-testing-container'}, props);
     popover = container.lookup('component:test-popover');
+    popover.setProperties(props);
 }
 
 function showPopover() {
@@ -58,8 +65,8 @@ function showPopover() {
     });
 }
 
-function setupPopover() {
-    createPopover();
+function setupPopover(props) {
+    createPopover(props);
     showPopover();
 }
 
@@ -68,116 +75,121 @@ test('when destroying target popover should also be destroyed', function() {
     Em.run(function() {
         target.destroy();
     });
-    equal(find('.scroll-ct > .popover').length, 0);
+    equal(0, $('body > .popover').length);
     ok(popover.get('isDestroyed'));
 });
 
-test('is appended to .scroll-ct if it exist', function() {
-    setupPopover();
-    equal(find('.scroll-ct > .popover').length, 1);
-});
-
-test('is appended to .section-body if it exist', function() {
-    ct.removeClass('scroll-ct');
-    ct.addClass('section-body');
-    setupPopover();
-    equal(find('.section-body > .popover').length, 1);
-});
-
-test('is appended to rootElement if no .scroll-ct exists', function() {
+test('is appended to rootElement', function() {
     ct.removeClass('scroll-ct');
     setupPopover();
-    equal(find('> .popover').length, 1);
+    equal(1, $('body > .popover').length);
 });
 
 test('should disappear when clicking outside it', function() {
     setupPopover();
-    click(document.body);
-    equal(find('.scroll-ct > .popover').length, 0);
+    $(window).trigger('mousedown');
+    equal(0, $('body > .popover').length);
 });
 
 test('should not disappear when clicking it', function() {
     setupPopover();
-    click('.popover');
-    equal(find('.scroll-ct > .popover').length, 1);
+    $('.popover').trigger('mousedown');
+    equal(1, $('body > .popover').length);
 });
 
 test('should not disappear when clicking an element inside it', function() {
     setupPopover();
     $('<div class="click-test"></div>').appendTo(popover.get('element'));
-    click('.click-test');
-    equal(find('.scroll-ct > .popover').length, 1);
+    $('.click-test')
+        .click()
+        .trigger('mousedown');
+    equal(1, $('body > .popover').length);
 });
 
 test('should not disappear when clicking target', function() {
     setupPopover();
-    click('.target');
-    equal(find('.scroll-ct > .popover').length, 1);
+    $('.target')
+        .click()
+        .trigger('mousedown');
+    equal(1, $('body > .popover').length);
 });
 
 test('should not disappear when clicking an element inside target', function() {
     setupPopover();
     $('<div class="click-test"></div>').appendTo($('.target'));
-    click('.click-test');
-    equal(find('.scroll-ct > .popover').length, 1);
+    $('.click-test')
+        .click()
+        .trigger('mousedown');
+    equal(1, $('body > .popover').length);
 });
 
 test('should match width', function() {
     setupPopover();
-    equal(find('.popover').outerWidth(), 200);
+    equal(200, $('.popover').outerWidth());
 });
 
 test('should not match if not configured to', function() {
     createPopover();
     popover.set('matchWidth', false);
     showPopover();
-    notEqual(find('.popover').outerWidth(), 200);
-    notEqual(find('.popover').css('width'), 'auto');
+    var $popover = $('.popover');
+    notEqual(200, $popover.outerWidth());
+    notEqual('auto', $popover.css('width'));
 });
 
 test('should respect minWidth', function() {
     createPopover();
     popover.set('minWidth', 300);
     showPopover();
-    equal(find('.popover').outerWidth(), 300);
+    equal(300, $('.popover').outerWidth());
 });
 
 test('should respect maxWidth', function() {
     createPopover();
     popover.set('maxWidth', 70);
     showPopover();
-    equal(find('.popover').outerWidth(), 70);
+    equal(70, $('.popover').outerWidth());
 });
 
 test('should align to left side as default', function() {
     target.$('.target').css('left', '117px');
     setupPopover();
-    ok(!find('.popover').hasClass('right'));
-    equal(find('.popover').css('left'), '117px');
-    equal(find('.popover').css('right'), 'auto');
+    var $popover = $('.popover');
+    ok(!$popover.hasClass('popover-align-right'));
+    equal('auto', $popover.css('right'), 'right css is auto');
+    equal(target.$('.target').offset().left, $popover.offset().left, 'left offset is correct');
 });
 
 test('should align to right side if configured', function() {
     target.$('.target').css('left', '117px');
-    createPopover();
-    popover.set('align', 'right');
-    popover.set('minWidth', 300);
-    showPopover();
-    ok(find('.popover').hasClass('right'));
-    equal(find('.popover').css('left'), 'auto');
-    equal(find('.popover').css('right'), '83px');
+    setupPopover({
+        align: 'right',
+        minWidth: 300
+    });
+
+    var $popover = $('.popover'),
+        $target = target.$('.target'),
+        popoverRight = $popover.offset().left + $popover.outerWidth();
+
+    ok($popover.hasClass('popover-align-right'));
+    equal('auto', $popover.css('left'));
+    equal($target.offset().left + $target.outerWidth(), popoverRight, 'right offset is correct');
 });
 
-test('should default to align to the targetView if no targetEl is set', function() {
+test('should align to the targetView if no targetEl is set', function() {
     target.$('.target').css('left', '117px');
     createPopover();
     Ember.run(function() {
         popover.show(target);
     });
-    equal(find('.popover').css('top'), '164px');
-    equal(find('.popover').css('right'), 'auto');
-    equal(find('.popover').css('bottom'), 'auto');
-    equal(find('.popover').css('left'), '0px');
+    var $popover = $('.popover');
+    equal($popover.css('top'), '164px');
+
+    var $target = target.$();
+
+    equal($target.offset().left, $popover.offset().left);
+    equal($popover.css('bottom'), 'auto');
+    equal($popover.css('right'), 'auto');
 });
 
 test('should position below when there is room for calculated height', function() {
@@ -185,21 +197,24 @@ test('should position below when there is room for calculated height', function(
     target.$('.target').css('top', '200px');
     createPopover();
     showPopover();
-    ok(!find('.popover').hasClass('above'));
-    equal(find('.popover').css('top'), '234px');
-    equal(find('.popover').css('bottom'), 'auto');
-    equal(find('.popover').css('max-height'), 'none');
+    var $popover = $('.popover');
+    ok(!$popover.hasClass('above'));
+    equal($popover.css('top'), '234px');
+    equal($popover.css('bottom'), 'auto');
 });
 
 test('should position above when there is not room for calculated height below', function() {
     container.register('template:components/test-popover', Ember.Handlebars.compile('<div style="height:57px;"></div>'));
-    target.$('.target').css('top', '200px');
-    createPopover();
-    showPopover();
-    ok(find('.popover').hasClass('above'));
-    equal(find('.popover').css('top'), 'auto');
-    equal(find('.popover').css('bottom'), '104px');
-    equal(find('.popover').css('max-height'), 'none');
+    target.$('.target').css('top', '230px');
+    setupPopover({
+        within: '.scroll-ct'
+    });
+
+    var $popover = $('.popover');
+    ok($popover.hasClass('popover-above'));
+    equal($popover.css('top'), 'auto');
+    equal($popover.css('bottom'), $(window).height() - 226 + 'px');
+    equal($popover.css('max-height'), 'none');
 });
 
 test('should position below when there is room for maxHeight', function() {
@@ -207,37 +222,26 @@ test('should position below when there is room for maxHeight', function() {
     createPopover();
     popover.set('maxHeight', 55);
     showPopover();
-    ok(!find('.popover').hasClass('above'));
-    equal(find('.popover').css('top'), '234px');
-    equal(find('.popover').css('bottom'), 'auto');
-    equal(find('.popover').css('max-height'), '55px');
+    var $popover = $('.popover');
+    ok(!$popover.hasClass('above'));
+    equal($popover.css('top'), '234px');
+    equal($popover.css('bottom'), 'auto');
+    equal($popover.css('max-height'), '55px');
 });
 
-test('should position above when there is not room for maxHeight below', function() {
+
+test('should position above when there is not room for minHeight below', function() {
     target.$('.target').css('top', '200px');
-    createPopover();
-    popover.set('maxHeight', 57);
-    showPopover();
-    ok(find('.popover').hasClass('above'));
-    equal(find('.popover').css('top'), 'auto');
-    equal(find('.popover').css('bottom'), '104px');
-    equal(find('.popover').css('max-height'), '57px');
-});
+    setupPopover({
+        within: '.scroll-ct',
+        minHeight: 100
+    });
 
-test('max-height style should be adjusted when there is little space', function() {
-    target.$('.target').css('top', '0px');
-    createPopover();
-    popover.set('maxHeight', 10000);
-    showPopover();
-    equal(find('.popover').css('max-height'), '256px');
-});
-
-test('max-height style should be respect minHeight', function() {
-    createPopover();
-    popover.set('maxHeight', 10000);
-    popover.set('minHeight', 780);
-    showPopover();
-    equal(find('.popover').css('max-height'), '780px');
+    var $popover = $('.popover');
+    ok($popover.hasClass('popover-above'), 'popover has popover-above class');
+    equal($popover.css('top'), 'auto');
+    equal($popover.css('bottom'), $(window).height() - 196 + 'px');
+    equal($popover.css('max-height'), 'none');
 });
 
 test('if a .popover-body element exists it should get its max-height style set', function() {
@@ -245,25 +249,18 @@ test('if a .popover-body element exists it should get its max-height style set',
     createPopover();
     popover.set('maxHeight', 120);
     showPopover();
-    equal(find('.popover-body').css('max-height'), '70px');
+    equal($('.popover-body').css('max-height'), '70px');
 });
 
-test('should respect position=below', function() {
-    target.$('.target').css('top', '300px');
-    createPopover();
-    popover.set('position', 'below');
-    showPopover();
-    ok(!find('.popover').hasClass('above'));
-    equal(find('.popover').css('top'), '334px');
-    equal(find('.popover').css('bottom'), 'auto');
-});
+test('should respect position=above if it can fit', function() {
+    target.$('.target').css('top', '80px');
+    setupPopover({
+        position: 'above'
+    });
+    var $popover = $('.popover'),
+        $target = target.$('.target');
 
-test('should respect position=above', function() {
-    target.$('.target').css('top', '0px');
-    createPopover();
-    popover.set('position', 'above');
-    showPopover();
-    ok(find('.popover').hasClass('above'));
-    equal(find('.popover').css('top'), 'auto');
-    equal(find('.popover').css('bottom'), '304px');
+    ok($popover.hasClass('popover-above', 'popover has popover-above class'));
+    equal($popover.css('top'), 'auto');
+    equal($target.offset().top - 4, $popover.offset().top + $popover.outerHeight());
 });

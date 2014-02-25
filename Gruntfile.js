@@ -1,7 +1,11 @@
 module.exports = function(grunt) {
     grunt.initConfig({
-        billy_builder: {
-            title: 'ember-popover'
+        'billy-builder': {
+            title: 'ember-popover',
+            compass: {
+                sassDir: 'src/scss',
+                bundleExec: true
+            }
         }
     });
 
