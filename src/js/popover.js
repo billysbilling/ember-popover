@@ -1,6 +1,7 @@
 //TODO: Should not position above if the content goes above the scrollCt's top (then put it below no matter what)
 
-var ieDetect = require('ie-detect');
+var functionProxy = require('function-proxy'),
+    ieDetect = require('ie-detect');
 
 /**
  * An extensible popover component shared by superfield selector, date selector etc.
@@ -103,7 +104,7 @@ module.exports = Em.Component.extend(require('ember-layer-mixin'), {
      */
     show: function(targetView, targetEl) {
         this.set('targetView', targetView);
-        targetView.one('willDestroyElement', Billy.proxy(this.destroy, this));
+        targetView.one('willDestroyElement', functionProxy(this.destroy, this));
         this._targetEl = targetEl || targetView.$();
         //We have to append it to the root element, later it will get moved to an appropriate ct
         this.appendTo(this.container.lookup('application:main').get('rootElement'));
@@ -114,12 +115,12 @@ module.exports = Em.Component.extend(require('ember-layer-mixin'), {
         //Move to appropriate ct so we can position and keep position when ct is scrolled
         this.$().appendTo(this._getCt());
         this._updatePosition();
-        $(window).on('mousedown', Billy.proxy(this._didMouseDownWindow, this));
+        $(window).on('mousedown', functionProxy(this._didMouseDownWindow, this));
     },
     
     willDestroyElement: function() {
         this._super();
-        $(window).off('mousedown', Billy.proxy(this._didMouseDownWindow, this));
+        $(window).off('mousedown', functionProxy(this._didMouseDownWindow, this));
     },
 
     _didMouseDownWindow: function(e) {
