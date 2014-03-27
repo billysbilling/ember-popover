@@ -1,6 +1,6 @@
 {
   "name": "ember-popover",
-  "version": "1.1.5",
+  "version": "1.2.0",
   "homepage": "https://github.com/billysbilling/ember-popover",
   "main": "src/js/popover.js",
   "billy-builder": {
