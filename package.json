@@ -2,7 +2,8 @@
   "name": "ember-popover",
   "version": "0.0.1",
   "devDependencies": {
+    "billy-builder": "git://github.com/billysbilling/billy-builder.git",
     "grunt": "~0.4.1",
-    "billy-builder": "git://github.com/billysbilling/billy-builder.git"
+    "grunt-contrib-compass": "~0.7.1"
   }
 }

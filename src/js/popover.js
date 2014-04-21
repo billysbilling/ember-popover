@@ -1,4 +1,4 @@
-//TODO: Should not position above if the content goes above the scrollCt's top (then put it below no matter what)
+require('ember');
 
 var functionProxy = require('function-proxy'),
     ieDetect = require('ie-detect');
@@ -14,10 +14,9 @@ var functionProxy = require('function-proxy'),
  * ```
  * 
  * @class PopoverComponent
- * @namespace Billy
  * @extends Ember.Component
  */
-module.exports = Em.Component.extend(require('ember-layer-mixin'), {
+module.exports = Em.Component.extend({
     layout: require('../templates/popover-layout'),
 
     classNameBindings: [':popover', 'isIe'],
@@ -95,6 +94,28 @@ module.exports = Em.Component.extend(require('ember-layer-mixin'), {
     }.property(),
 
     /**
+     * Application bounds.  If null, the app's rootElement will be used
+     *
+     * @property within
+     * @type "Selectable" object or string CSS selector
+     */
+    within: null,
+
+    /**
+     * Array of scrollable parent elements of the target that a scroll event will be bound to.
+     * We need to $.on()/$.off() these events when creating/destroying the popover
+     *
+     * @property _scrollableParents
+     * @type Array
+     */
+    _scrollableParents: null,
+
+    /**
+     * Additional popover height that's not part of a scrollable element
+     */
+    _bodyExtraHeight: 0,
+
+    /**
      * Tells the popover to display itself and align it to `targetEl`.
      * 
      * When `targetView` is destroyed the popover will automatically destroy itself.
@@ -105,24 +126,114 @@ module.exports = Em.Component.extend(require('ember-layer-mixin'), {
     show: function(targetView, targetEl) {
         this.set('targetView', targetView);
         targetView.one('willDestroyElement', functionProxy(this.destroy, this));
-        this._targetEl = targetEl || targetView.$();
-        //We have to append it to the root element, later it will get moved to an appropriate ct
+        this._targetEl = targetEl ? $(targetEl) : targetView.$();
         this.appendTo(this.container.lookup('application:main').get('rootElement'));
     },
 
-    didInsertElement: function() {
-        this._super();
-        //Move to appropriate ct so we can position and keep position when ct is scrolled
-        this.$().appendTo(this._getCt());
-        this._updatePosition();
-        $(window).on('mousedown', functionProxy(this._didMouseDownWindow, this));
-    },
-    
-    willDestroyElement: function() {
-        this._super();
-        $(window).off('mousedown', functionProxy(this._didMouseDownWindow, this));
+    /**
+     * Places the popover element's z-index 1 higher than the highest z-index found
+     *
+     * @private
+     */
+    _updateZIndex: function (){
+        var highest = Math.max.apply(null,
+            $.map($('body > *'), function(el) {
+                var $el = $(el);
+                if ($el.css('position') !== 'static') {
+                    return parseInt($el.css('z-index')) || 1;
+                }
+                return 1;
+            }));
+        this.$().css('z-index', highest + 1);
     },
 
+    /**
+     * Updates z-index, position, registers scroll events on scrollable parent elements, and registers event handlers
+     */
+    didInsertElement: function() {
+        this._super();
+        this._updateZIndex();
+        this._registerScrollableParents();
+
+        //Bind events
+        $(window).on('resize', functionProxy(this.updatePosition, this));
+        $(window).on('mousedown', functionProxy(this._didMouseDownWindow, this));
+        $(document).on('scroll', functionProxy(this.updatePosition, this));
+
+        //Set _bodyExtraHeight (any extra height outside of the scrollable area)
+        var bodyEl = this.$('.popover-body');
+        if (bodyEl.length) {
+            this.set('_bodyExtraHeight', this.$().outerHeight() - bodyEl.outerHeight());
+        }
+
+        //Update position
+        this.updatePosition();
+    },
+
+    /**
+     * Unregisters scroll events for scrollable parent elements, unregisters event handlers
+     */
+    willDestroyElement: function() {
+        this._super();
+        this._unregisterScrollableParents();
+        $(window).off('resize', functionProxy(this.updatePosition, this));
+        $(window).off('mousedown', functionProxy(this._didMouseDownWindow, this));
+        $(document).off('scroll', functionProxy(this.updatePosition, this));
+    },
+
+    /**
+     * Finds all scrollable parents and registers this.updatePosition on the scroll event handler
+     *
+     * @private
+     */
+    _registerScrollableParents: function() {
+        Em.assert('_scrollableParents should be empty when initializing this component', !this.get('_scrollableParents.length'));
+        var el = this._targetEl,
+            parents = this.get('_scrollableParents') || Em.A();
+        while (el.length) {
+            //If document, we've reached the top (Firefox doesn't like using .css on document)
+            if (el[0] === document) {
+                break;
+            }
+
+            //Define properties that denote "scrollable".  This is not foolproof, as "initial" and "inherit" could
+            //potentially still result in a scrollable element
+            var sp = Em.A(['scroll', 'auto']);
+
+            //Check if overflows are scrollable
+            if (sp.contains(el.css('overflow')) || sp.contains(el.css('overflow-x')) || sp.contains(el.css('overflow-y'))) {
+                parents.push(el);
+                el.on('scroll', functionProxy(this.updatePosition, this));
+            }
+
+            //Next
+            el = el.parent();
+        }
+        this.set('_scrollableParents', parents);
+    },
+
+    /**
+     * Unregisters all scroll listeners from scrollable parent elements
+     *
+     * @private
+     */
+    _unregisterScrollableParents: function() {
+        var self = this,
+            scrollableParents = this.get('_scrollableParents');
+        if (!scrollableParents) {
+            return;
+        }
+        scrollableParents.forEach(function(parent) {
+            parent.off('scroll', functionProxy(self.updatePosition, self));
+        });
+    },
+
+    /**
+     * Destroys popover unless one of the containing element caveats applies
+     *
+     * @param e mousedown event
+     * @private
+     */
     _didMouseDownWindow: function(e) {
         if (!this.get('destroyOnWindowMouseDown')) {
             return;
@@ -134,67 +245,87 @@ module.exports = Em.Component.extend(require('ember-layer-mixin'), {
             }
             var el = self.get('element'),
                 targetEl = self._targetEl[0];
+
             //Don't hide if the clicked target is within this popover's element
             if ($.contains(el, e.target) || el === e.target || $.contains(targetEl, e.target) || targetEl === e.target) {
                 return;
             }
+
             //Don't hide if click was within a layer that has higher z-index than this layer
             var layer = $(e.target).closest('.layer');
-            if (layer && 1*layer.css('z-index') > 1*self.$().css('z-index')) {
+            if (layer && parseInt(layer.css('z-index')) > parseInt(self.$().css('z-index'))) {
                 return;
             }
             self.destroy();
         });
     },
 
-    _getCt: function() {
-        var ct = this._targetEl.closest('.section-body, .scroll-ct');
-        if (ct.length == 0) {
-            ct = $(this.container.lookup('application:main').get('rootElement'));
-        }
-        return ct;
+    /**
+     * Updates the position of the popover on show, resizing of window, or scrolling of scrollable parent elements.
+     *
+     * @private
+     */
+    updatePosition: function() {
+        var $popover = this.$(),
+            within = this.get('within') || this.container.lookup('application:main').get('rootElement');
+
+        //Update position
+        $popover.css(this._calculateCss($(within), $(window)));
     },
 
-    _updatePosition: function() {
-        var align = this.get('align'),
+    /**
+     * Calculates new CSS position/dimensions based on provided within and viewport elements
+     * @param $within
+     * @param $viewport
+     * @returns {}
+     * @private
+     */
+    _calculateCss: function($within, $viewport) {
+        //Constants
+        var notchPadding = 4,
+            viewportPadding = 10;
+
+        //Elements
+        var $target = this._targetEl,
+            $popover = this.$(),
+            $body = this.$('.popover-body');
+
+        //Specific values
+        var align = this.get('align') || 'left',
             position = this.get('position'),
-            targetEl = this._targetEl,
-            popoverEl = this.$(),
-            popoverHeight = popoverEl.outerHeight(),
-            ct = this._getCt(),
-            ctWidth = ct.outerWidth(),
-            ctOffset = ct.offset(),
-            ctTop = ctOffset.top,
-            ctBottom = ctTop + ct.outerHeight(),
-            offsetParent = popoverEl.offsetParent(),
-            offsetParentWidth = offsetParent.outerWidth(),
-            offsetParentOffset = offsetParent.offset(),
-            offsetParentTop = offsetParentOffset.top - ct.scrollTop(),
-            offsetParentBottom = offsetParentTop + offsetParent.outerHeight(),
-            offsetParentLeft = offsetParentOffset.left - ct.scrollLeft(),
-            notchSize = 4,
-            targetWidth = targetEl.outerWidth(),
-            targetOffset = targetEl.offset(),
-            targetTop = targetOffset.top - notchSize,
-            targetBottom = targetTop + targetEl.outerHeight() + 2*notchSize, // (one time notchSize was already applied in `targetTop`)
-            spacePadding = 10,
-            space,
-            spaceAbove = targetTop - ctTop - spacePadding,
-            spaceUnder = ctBottom - targetBottom - spacePadding,
-            minHeight = this.get('minHeight'),
-            maxHeight = this.get('maxHeight'),
-            preferredHeight = popoverHeight,
-            resolvedMaxHeight,
-            popoverTop = 'auto',
-            popoverRight = 'auto',
-            popoverBottom = 'auto',
-            popoverLeft = 'auto',
             minWidth = this.get('minWidth'),
             maxWidth = this.get('maxWidth'),
-            width = 0,
-            bodyEl = this.$('.popover-body'),
-            exceptBodyHeight = popoverHeight - bodyEl.outerHeight(),
-            bodyMaxHeight = null;
+            minHeight = this.get('minHeight'),
+            maxHeight = this.get('maxHeight');
+
+        //Determine tallest possible popover based on the within element's height
+        if (maxHeight) {
+            var appHeight = $within.outerHeight(),
+                enforcedMaxHeight = (appHeight - $target.outerHeight()) / 2 - viewportPadding;
+
+            //Enforce a sensible maxHeight
+            maxHeight = maxHeight && maxHeight > enforcedMaxHeight ? enforcedMaxHeight : maxHeight;
+
+            //Set .popover-body max-height
+            if ($body.length > 0) {
+                $body.css('max-height', (maxHeight - this.get('_bodyExtraHeight'))+'px');
+            }
+        }
+
+        //Take measurements
+        var targetWidth = $target.outerWidth(),
+            targetOffset = $target.offset(),
+            spaceAbove = targetOffset.top - viewportPadding,
+            spaceBelow = $within.outerHeight() - (targetOffset.top + $target.outerHeight() + viewportPadding);
+
+        //Derived properties
+        var width,
+            top = 'auto',
+            bottom = 'auto',
+            left = 'auto',
+            right = 'auto',
+            isAbove = false;
+
         //Set width
         if (this.get('matchWidth')) {
             width = targetWidth;
@@ -205,61 +336,68 @@ module.exports = Em.Component.extend(require('ember-layer-mixin'), {
         if (maxWidth) {
             width = Math.min(width, maxWidth);
         }
-        if (width > 0) {
-            popoverEl.outerWidth(width);
+        if (width && width > 0) {
+            $popover.outerWidth(width);
         }
-        //Left/right align
-        if (!align) {
-            //See if there is space for the popover to be left aligned within its scroll container
-            if (targetOffset.left - offsetParentLeft + width < ctWidth) {
-                align = 'left';
-            } else {
-                align = 'right';
-            }
-        }
+
+        //Set right/left
         if (align === 'right') {
-            popoverRight = offsetParentWidth - (targetOffset.left - offsetParentLeft) - targetWidth;
-            popoverEl.addClass('right');
+            right = $viewport.width() - targetOffset.left - targetWidth;
+            $popover.addClass('popover-align-right');
         } else {
-            popoverLeft = targetOffset.left - offsetParentLeft;
-            popoverEl.removeClass('right');
+            left = targetOffset.left;
+            $popover.removeClass('popover-align-right');
         }
-        //Position under or above
-        if (maxHeight) {
-            preferredHeight = maxHeight;
-        }
-        if (position === 'below' || (position !== 'above' && (spaceUnder >= preferredHeight || spaceUnder > spaceAbove))) {
-            space = spaceUnder;
-            popoverTop = targetBottom - offsetParentTop;
-            popoverEl.removeClass('above');
+
+        //Determine if popover should appear above target
+        if (position === 'below') {
+            //Do nothing
+        } else if (position === 'above') {
+            //If above specified and there's room...
+            isAbove = true;
         } else {
-            space = spaceAbove;
-            popoverBottom = offsetParentBottom - targetTop;
-            popoverEl.addClass('above');
-        }
-        if (maxHeight) {
-            resolvedMaxHeight = space;
-            resolvedMaxHeight = Math.min(resolvedMaxHeight, maxHeight);
-            if (minHeight) {
-                resolvedMaxHeight = Math.max(resolvedMaxHeight, minHeight);
+            if (maxHeight) {
+                //If max height is set
+                if (spaceAbove > maxHeight && spaceBelow < maxHeight) {
+                    //If space above is sufficient and space below is insufficient
+                    isAbove = true;
+                }
+            } else {
+                //If max height is not set, we need to use the popover's height
+                var popoverHeight = Math.max($popover.outerHeight(), minHeight);
+
+                if (spaceAbove > popoverHeight && spaceBelow < popoverHeight) {
+                    //If space above is sufficient and space below is insufficient
+                    isAbove = true;
+                }
             }
-            //If a body element was found we need to set its maximum height
-            if (bodyEl.length > 0) {
-                bodyMaxHeight = resolvedMaxHeight - exceptBodyHeight;
-                bodyEl.css('max-height', bodyMaxHeight+'px');
-            }
         }
-        //Set position
-        popoverEl.css({
-            top: popoverTop,
-            right: popoverRight,
-            bottom: popoverBottom,
-            left: popoverLeft,
-            'max-height': resolvedMaxHeight ? resolvedMaxHeight+'px' : 'none'
-        });
+
+        //Set top or bottom property
+        if (isAbove) {
+            bottom = $viewport.height() - targetOffset.top + notchPadding;
+            $popover.addClass('popover-above');
+        } else {
+            top = targetOffset.top + $target.outerHeight() + notchPadding;
+            $popover.removeClass('popover-above');
+        }
+
+        //Return CSS hash
+        return {
+            top: top,
+            right: right,
+            bottom: bottom,
+            left: left,
+            'min-height': minHeight,
+            'max-height': maxHeight ? maxHeight: 'none',
+            'min-width': minWidth ? minWidth : 'none',
+            'max-width': maxWidth ? maxWidth : 'none'
+        };
     },
-    
-    //Hack since Ember.Component does not support {{yield}} when there is no parentView
+
+    /**
+     * Hack since Ember.Component does not support {{yield}} when there is no parentView
+     */
     _yield: function() {
         return Em.View.prototype._yield.apply(this, arguments);
     }
