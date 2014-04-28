@@ -251,11 +251,12 @@ module.exports = Em.Component.extend({
                 return;
             }
 
-            //Don't hide if click was within a layer that has higher z-index than this layer
-            var layer = $(e.target).closest('.layer');
-            if (layer && parseInt(layer.css('z-index')) > parseInt(self.$().css('z-index'))) {
+            //Don't hide if click was within a popover that has higher z-index
+            var parentPopover = $(e.target).closest('.popover');
+            if (parentPopover && parseInt(parentPopover.css('z-index'), 10) > parseInt(self.$().css('z-index'), 10)) {
                 return;
             }
+
             self.destroy();
         });
     },
