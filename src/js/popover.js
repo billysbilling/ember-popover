@@ -140,7 +140,7 @@ module.exports = Em.Component.extend({
             $.map($('body > *'), function(el) {
                 var $el = $(el);
                 if ($el.css('position') !== 'static') {
-                    return parseInt($el.css('z-index')) || 1;
+                    return Number($el.css('z-index')) || 1;
                 }
                 return 1;
             }));
@@ -253,7 +253,7 @@ module.exports = Em.Component.extend({
 
             //Don't hide if click was within a popover that has higher z-index
             var parentPopover = $(e.target).closest('.popover');
-            if (parentPopover && parseInt(parentPopover.css('z-index'), 10) > parseInt(self.$().css('z-index'), 10)) {
+            if (parentPopover && Number(parentPopover.css('z-index')) > Number(self.$().css('z-index'))) {
                 return;
             }
 
