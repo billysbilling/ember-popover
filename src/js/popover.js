@@ -1,7 +1,8 @@
 require('ember');
 
 var functionProxy = require('function-proxy'),
-    ieDetect = require('ie-detect');
+    ieDetect = require('ie-detect'),
+    highestZIndex = require('highest-z-index');
 
 /**
  * An extensible popover component shared by superfield selector, date selector etc.
@@ -135,16 +136,9 @@ module.exports = Em.Component.extend({
      *
      * @private
      */
-    _updateZIndex: function (){
-        var highest = Math.max.apply(null,
-            $.map($('body > *'), function(el) {
-                var $el = $(el);
-                if ($el.css('position') !== 'static') {
-                    return Number($el.css('z-index')) || 1;
-                }
-                return 1;
-            }));
-        this.$().css('z-index', highest + 1);
+    _updateZIndex: function () {
+        var zIndex = 1 + highestZIndex();
+        this.$().css('z-index', zIndex);
     },
 
     /**
