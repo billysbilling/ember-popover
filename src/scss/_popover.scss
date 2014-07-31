@@ -4,7 +4,6 @@
     .popover {
         $notch-size: 8px;
 
-        z-index: 1000;
         @include filter(drop-shadow(0px 1px 3px rgba(0, 0, 0, 0.4)));
         filter: url('data:image/svg+xml,<svg height="0" xmlns="http://www.w3.org/2000/svg"><filter id="drop-shadow"><feGaussianBlur in="SourceAlpha" stdDeviation="3"/><feOffset dx="0" dy="1" result="offsetblur"/><feFlood flood-color="rgba(0,0,0,0.4)"/><feComposite in2="offsetblur" operator="in"/><feMerge><feMergeNode/><feMergeNode in="SourceGraphic"/></feMerge></filter></svg>#drop-shadow');
         -webkit-transform: translateZ(0);
