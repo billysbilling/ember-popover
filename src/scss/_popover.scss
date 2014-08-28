@@ -1,15 +1,15 @@
-@import "compass/css3";
-
 @mixin popover {
     .popover {
         $notch-size: 8px;
 
-        @include filter(drop-shadow(0px 1px 3px rgba(0, 0, 0, 0.4)));
+        $filter: drop-shadow(0px 1px 3px rgba(0, 0, 0, 0.4));
+        -webkit-filter: $filter;
+        filter: $filter;
         filter: url('data:image/svg+xml,<svg height="0" xmlns="http://www.w3.org/2000/svg"><filter id="drop-shadow"><feGaussianBlur in="SourceAlpha" stdDeviation="3"/><feOffset dx="0" dy="1" result="offsetblur"/><feFlood flood-color="rgba(0,0,0,0.4)"/><feComposite in2="offsetblur" operator="in"/><feMerge><feMergeNode/><feMergeNode in="SourceGraphic"/></feMerge></filter></svg>#drop-shadow');
         -webkit-transform: translateZ(0);
         position: absolute;
         background: #fff;
-        @include border-radius($standard-border-radius);
+        border-radius: $standard-border-radius;
         padding: $tight-standard-padding;
         top: 0;
         left: 0;
@@ -45,7 +45,7 @@
         }
 
         &.is-ie {
-            @include box-shadow(0 0 12px rgba(black, 0.3));
+            box-shadow: 0 0 12px rgba(black, 0.3);
         }
     }
 }
