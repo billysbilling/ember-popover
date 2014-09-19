@@ -6,25 +6,25 @@ var functionProxy = require('function-proxy'),
 
 /**
  * An extensible popover component shared by superfield selector, date selector etc.
- * 
+ *
  * Usage example:
- * 
+ *
  * ```javascript
  * var popover = this.container.lookup('component:my-popover');
  * popover.show(view, view.$('.thing-that-has-popover');
  * ```
- * 
+ *
  * @class PopoverComponent
  * @extends Ember.Component
  */
 module.exports = Em.Component.extend({
     layout: require('../templates/popover-layout'),
 
-    classNameBindings: [':popover', 'isIe'],
+    classNameBindings: [':popover', ':ember-window-allow-focus', 'isIe'],
 
     /**
      * Whether the popover should match the `target`'s width.
-     * 
+     *
      * @property matchWidth
      * @type Boolean
      */
@@ -32,7 +32,7 @@ module.exports = Em.Component.extend({
 
     /**
      * The popover will never be narrower than this.
-     * 
+     *
      * @property minWidth
      * @type Number
      */
@@ -48,7 +48,7 @@ module.exports = Em.Component.extend({
 
     /**
      * The popover's `max-height` css property will never be set to less than this value.
-     * 
+     *
      * Only has an effect if `maxHeight` is also set.
      *
      * @property minWidth
@@ -58,7 +58,7 @@ module.exports = Em.Component.extend({
 
     /**
      * Tells the popover to set the `max-height` css property of its own element.
-     * 
+     *
      * The `max-height` will never be more than the available space above/below the target (unless `minheight` is used
      * too).
      *
@@ -69,7 +69,7 @@ module.exports = Em.Component.extend({
 
     /**
      * Will force the position to be either above or below, if set.
-     * 
+     *
      * @property position
      * @type String Either `above` or `below`. `null` to be ignored.
      */
@@ -118,9 +118,9 @@ module.exports = Em.Component.extend({
 
     /**
      * Tells the popover to display itself and align it to `targetEl`.
-     * 
+     *
      * When `targetView` is destroyed the popover will automatically destroy itself.
-     * 
+     *
      * @param {Ember.View} targetView
      * @param {Element} targetEl
      */
